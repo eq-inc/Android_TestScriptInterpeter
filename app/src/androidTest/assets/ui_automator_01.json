@@ -1,0 +1,180 @@
+{
+	"test": [
+		{
+			"testApplicationId": "jp.co.thcomp.unlimited_hand",
+			"testProcedures": [
+				{
+					"type": "StartScreenRecord"
+				},
+				{
+					"type": "test",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/swtConnectUnlimitedHand"
+					},
+					"testParams": [
+						{
+							"name": "Checked",
+							"value": "false"
+						},
+						{
+							"name": "Enabled",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"type": "test",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/swtDebugLog"
+					},
+					"testParams": [
+						{
+							"name": "Checked",
+							"value": "false"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/swtConnectUnlimitedHand"
+					}
+				},
+				{
+					"type": "StopScreenRecord"
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "WaitShowItemByResourceId",
+							"value": "jp.co.thcomp.unlimited_hand:id/spnrMenu"
+						},
+						{
+							"name": "WaitTimeoutMS",
+							"value": "60000"
+						}
+					]
+				},
+				{
+					"type": "test",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/spnrMenu"
+					},
+					"testParams": [
+						{
+							"name": "Text",
+							"value": "output"
+						}
+					]
+				},
+				{
+					"type": "test",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/swtConnectUnlimitedHand"
+					},
+					"testParams": [
+						{
+							"name": "Checked",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"type": "StartScreenRecord"
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/spnrMenu"
+					}
+				},
+				{
+					"type": "selectItem",
+					"testParams": [
+						{
+							"name": "Text",
+							"value": "input"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "WaitShowItemByText",
+							"value": "START TO READ_SENSOR"
+						},
+						{
+							"name": "WaitTimeoutMS",
+							"value": "10000"
+						}
+					]
+				},
+				{
+					"type": "swipe",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/flContentArea"
+					},
+					"testParams": [
+						{
+							"name": "SizeY",
+							"value": "100"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemText": "CLEAR DATA"
+					}
+				},
+				{
+					"type": "swipe",
+					"targetItem": {
+						"itemResourceId": "jp.co.thcomp.unlimited_hand:id/flContentArea"
+					},
+					"testParams": [
+						{
+							"name": "SizeY",
+							"value": "-100"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemText": "START TO READ SENSOR"
+					}
+				},
+				{
+					"type": "StopScreenRecord"
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "10000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemText": "STOP TO READ SENSOR"
+					}
+				},
+				{
+					"type": "ScreenShot"
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemText": "SAVE DATA ON STORAGE WITH COMPRESSED BY ZIP"
+					}
+				}
+			]
+		}
+	]
+}
