@@ -14,20 +14,21 @@ public class SizeUnitUtil {
     private enum SizeUnitType {
         Dp("dp", "getPxFromDp"),
         Dip("dip", "getPxFromDp"),
+        None("", "getPxFromPx"),
         Percent("%", "getPxFromPercentForX", "getPxFromPercentForY"),
         Px("px", "getPxFromPx"),
         Sp("sp", "getPxFromSp"),;
 
         private String mUnitText;
-        private String mMethodNameForX;
-        private String mMethodNameForY;
+        private String mMethodNameForX; // use by reflection
+        private String mMethodNameForY; // use by reflection
         private String mSizeUnitFormat;
 
         SizeUnitType(String unitText, String... methodNameForXY) {
             mUnitText = unitText;
             mMethodNameForX = methodNameForXY[0];
             mMethodNameForY = methodNameForXY.length > 1 ? methodNameForXY[1] : methodNameForXY[0];
-            mSizeUnitFormat = "(-?\\s*[1-9]+[0-9])*\\s*" + mUnitText;
+            mSizeUnitFormat = "(-?\\s*[1-9]+[0-9]*)\\s*" + mUnitText;
         }
 
         public boolean matchUnit(String sizeValue) {

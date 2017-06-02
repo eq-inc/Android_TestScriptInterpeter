@@ -1,5 +1,3 @@
 <resources>
-    <string name="app_name">TestUIAutomator</string>
-    <string name="title_activity_main">MainActivity</string>
-    <string name="title_activity_runtime_permission">RuntimePermissionActivity</string>
+    <string name="app_name">TestScriptInterpreter</string>
 </resources>

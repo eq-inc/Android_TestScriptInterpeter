@@ -3,6 +3,8 @@ package jp.eq_inc.testuiautomator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.graphics.Rect;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.RemoteException;
 import android.support.test.InstrumentationRegistry;
@@ -51,6 +53,8 @@ import static org.junit.Assert.assertTrue;
 @SdkSuppress(minSdkVersion = 18)
 public class TestDynamicUIAutomator {
     private static final String TAG = TestDynamicUIAutomator.class.getSimpleName();
+    private static final String ASSET_FILE_PREFIX = "file:///android_asset/";
+    private static final String PARAM_STRING_CONFIG_FILEPATH = "config_file";
     private static final String TEST_CONFIG_FILE_NAME = "ui_automator.json";
     private static final String EXTERNAL_TEST_CONFIG_FILE_PATH = Environment.getExternalStorageDirectory() + File.separator + TEST_CONFIG_FILE_NAME;
 
@@ -62,7 +66,15 @@ public class TestDynamicUIAutomator {
 
     @Before
     public void start() {
-        if (readConfig()) {
+        String configFilePath = EXTERNAL_TEST_CONFIG_FILE_PATH;
+        Bundle arguments = InstrumentationRegistry.getArguments();
+        if (arguments != null) {
+            if (arguments.containsKey(PARAM_STRING_CONFIG_FILEPATH)) {
+                configFilePath = arguments.getString(PARAM_STRING_CONFIG_FILEPATH);
+            }
+        }
+
+        if (readConfig(configFilePath)) {
             // Initialize UiDevice instance
             mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
 
@@ -96,7 +108,13 @@ public class TestDynamicUIAutomator {
             for (ConfigData.TestData test : mConfigData.test) {
                 // Launch the app
                 Context context = InstrumentationRegistry.getContext();
-                final Intent intent = context.getPackageManager().getLaunchIntentForPackage(test.testApplicationId);
+                Intent intent = null;
+                if (test.testActivity == null || test.testActivity.length() == 0) {
+                    intent = context.getPackageManager().getLaunchIntentForPackage(test.testApplicationId);
+                } else {
+                    intent = new Intent();
+                    intent.setClassName(test.testApplicationId, test.testActivity);
+                }
 
                 if (intent != null) {
                     // Clear out any previous instances
@@ -121,12 +139,14 @@ public class TestDynamicUIAutomator {
                             assertTrue(false);
                         } catch (UiAutomatorException e) {
                             e.printStackTrace();
+                            assertTrue(false);
                         } catch (NoSuchMethodException e) {
                             e.printStackTrace();
                         } catch (InvocationTargetException e) {
                             e.printStackTrace();
                         } catch (IllegalAccessException e) {
                             e.printStackTrace();
+                            assertTrue(false);
                         }
                     }
                 } else {
@@ -145,9 +165,9 @@ public class TestDynamicUIAutomator {
         }
     }
 
-    private boolean readConfig() {
+    private boolean readConfig(String configFilePath) {
         boolean ret = false;
-        File configFile = new File(EXTERNAL_TEST_CONFIG_FILE_PATH);
+        File configFile = new File(configFilePath);
         InputStream configInputStream = null;
 
         if (configFile.exists()) {
@@ -157,9 +177,14 @@ public class TestDynamicUIAutomator {
                 e.printStackTrace();
             }
         } else {
+            String tempConfigFilePath = configFilePath;
+
+            if (tempConfigFilePath.toLowerCase().startsWith(ASSET_FILE_PREFIX)) {
+                tempConfigFilePath = tempConfigFilePath.substring(ASSET_FILE_PREFIX.length());
+            }
             AssetManager assetManager = InstrumentationRegistry.getContext().getAssets();
             try {
-                configInputStream = assetManager.open(TEST_CONFIG_FILE_NAME);
+                configInputStream = assetManager.open(tempConfigFilePath);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -280,7 +305,7 @@ public class TestDynamicUIAutomator {
                         IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
                     }
                 }
-            }else{
+            } else {
                 Context context = InstrumentationRegistry.getContext();
                 ConfigData.TestParameter testParamPositionX = procedure.getParam(ConfigData.ParameterType.PositionX);
                 ConfigData.TestParameter testParamPositionY = procedure.getParam(ConfigData.ParameterType.PositionY);
@@ -362,43 +387,69 @@ public class TestDynamicUIAutomator {
     }
 
     private void procedureSelectItem(ConfigData.TestProcedure procedure) throws UiAutomatorException {
-        // Spinnerからのドロップダウンメニューの中身を選択する場合のルート
-        // この場合は選択が困難なため、Dpadを疑似的に使用したようにふるまう。
-        // ただし、最初のDpadDownはtouch -> keyモードへの切り替えとして消費されるので、1回多く押下させる
-        ConfigData.TestParameter testParam = procedure.getParam(ConfigData.ParameterType.Index);
-        if (testParam != null) {
-            int keyDownDpadDownCount = 0;
-
-            try {
-                keyDownDpadDownCount = Integer.valueOf(testParam.value);
-
-                for (int i = 0; i < (keyDownDpadDownCount + 1); i++) {
-                    mDevice.pressDPadDown();
+        if (procedure != null) {
+            if (procedure.needUiObject()) {
+                UiObject item = procedure.findUiObject(mDevice);
+                ConfigData.TestParameter testParam = procedure.getParam(ConfigData.ParameterType.Index);
+                if (testParam != null) {
+                    IllegalParamException.throwException(procedure, "unsupport \"index\" parameter on selectItem with specific UiObject");
                 }
-                mDevice.pressDPadCenter();
-            } catch (NumberFormatException e) {
-                IllegalParamException.throwException(e, procedure, "value of Index parameter is not a integer number: " + procedure.toString());
-            }
-            return;
-        }
 
-        testParam = procedure.getParam(ConfigData.ParameterType.Text);
-        if (testParam != null) {
-            while (true) {
-                mDevice.pressDPadDown();
-                UiObject childUiObject = mDevice.findObject(new UiSelector().selected(true));
-                if (childUiObject == null || !childUiObject.exists()) {
-                    break;
-                } else {
-                    UiObjectUtil.dumpUiObject(childUiObject);
-                    if (UiObjectUtil.existTargetText(childUiObject, testParam.value, false)) {
-                        mDevice.pressDPadCenter();
-                        break;
+                testParam = procedure.getParam(ConfigData.ParameterType.Text);
+                if (testParam != null) {
+                    try {
+                        if (item.isScrollable()) {
+                            UiObject targetChildObject = UiObjectUtil.findUiObjectFromScrollable(item, testParam.value);
+                            if(targetChildObject != null){
+                                targetChildObject.click();
+                            }
+                        }
+                    } catch (UiObjectNotFoundException e) {
+
                     }
+
+                    return;
+                }
+            } else {
+                // Spinnerからのドロップダウンメニューの中身を選択する場合のルート
+                // この場合は選択が困難なため、Dpadを疑似的に使用したようにふるまう。
+                // ただし、最初のDpadDownはtouch -> keyモードへの切り替えとして消費されるので、1回多く押下させる
+                ConfigData.TestParameter testParam = procedure.getParam(ConfigData.ParameterType.Index);
+                if (testParam != null) {
+                    int keyDownDpadDownCount = 0;
+
+                    try {
+                        keyDownDpadDownCount = Integer.valueOf(testParam.value);
+
+                        for (int i = 0; i < (keyDownDpadDownCount + 1); i++) {
+                            mDevice.pressDPadDown();
+                        }
+                        mDevice.pressDPadCenter();
+                    } catch (NumberFormatException e) {
+                        IllegalParamException.throwException(e, procedure, "value of Index parameter is not a integer number: " + procedure.toString());
+                    }
+                    return;
+                }
+
+                testParam = procedure.getParam(ConfigData.ParameterType.Text);
+                if (testParam != null) {
+                    while (true) {
+                        mDevice.pressDPadDown();
+                        UiObject childUiObject = mDevice.findObject(new UiSelector().selected(true));
+                        if (childUiObject == null || !childUiObject.exists()) {
+                            break;
+                        } else {
+                            UiObjectUtil.dumpUiObject(childUiObject);
+                            if (UiObjectUtil.existTargetText(childUiObject, testParam.value, false)) {
+                                mDevice.pressDPadCenter();
+                                break;
+                            }
+                        }
+                    }
+
+                    return;
                 }
             }
-
-            return;
         }
     }
 

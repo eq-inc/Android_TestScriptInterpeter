@@ -126,12 +126,14 @@ public class ConfigData {
 
     public static class TestData {
         public String testApplicationId;
+        public String testActivity;
         public TestProcedure[] testProcedures;
 
         @Override
         public String toString() {
             return "TestData{" +
                     "testApplicationId='" + testApplicationId + '\'' +
+                    ", testActivity='" + testActivity + '\'' +
                     ", testProcedures=" + Arrays.toString(testProcedures) +
                     '}';
         }
