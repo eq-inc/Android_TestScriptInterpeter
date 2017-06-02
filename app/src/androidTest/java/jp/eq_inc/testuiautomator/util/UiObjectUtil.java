@@ -8,8 +8,6 @@ import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
 import android.util.Log;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 public class UiObjectUtil {
@@ -25,33 +23,44 @@ public class UiObjectUtil {
                 int width = scrollableUiObjectBounds.width();
                 int height = scrollableUiObjectBounds.height();
 
-                // 一旦左上にスクロールしてしまう
-                int count = 1;
-                while(true){
-                    if(!device.swipe(
-                            centerXinBounds,
-                            centerYinBounds,
-                            centerXinBounds + count,
-                            centerYinBounds + count, 2)){
-                        break;
+                int childCount = scrollableUiObject.getChildCount();
+                if (childCount > 0) {
+                    UiObject childObject = scrollableUiObject.getChild(new UiSelector().index(0));
+                    Rect childBounds = childObject.getBounds();
+
+                    // 一旦左上にスクロールしてしまう
+                    int positionCount = 1;
+                    while (true) {
+                        device.swipe(centerXinBounds, centerYinBounds, centerXinBounds, centerYinBounds + positionCount * 100, 10);
+                        device.swipe(centerXinBounds, centerYinBounds, centerXinBounds + positionCount * 100, centerYinBounds, 10);
+
+                        Rect newChildBounds = childObject.getBounds();
+                        if (newChildBounds.equals(childBounds)) {
+                            break;
+                        } else {
+                            childBounds = newChildBounds;
+                            positionCount++;
+                        }
                     }
-                    count++;
                 }
 
                 do {
-                    do{
-                        for (int i = 0, childCount = scrollableUiObject.getChildCount(); i < childCount; i++) {
+                    do {
+                        for (int i = 0; i < childCount; i++) {
                             UiObject childObject = scrollableUiObject.getChild(new UiSelector().index(i));
                             if (UiObjectUtil.existTargetText(childObject, targetText, false)) {
                                 ret = childObject;
                                 break;
                             }
                         }
-                    }while ((ret == null) && device.swipe(centerXinBounds, centerYinBounds, centerXinBounds - width, centerYinBounds, 10));
+                    }
+                    while ((ret == null) && device.swipe(centerXinBounds, centerYinBounds, centerXinBounds - width, centerYinBounds, 10));
 
                     // 元の位置に戻す
-                    while (device.swipe(centerXinBounds, centerYinBounds, centerXinBounds + width, centerYinBounds, 10));
-                }while((ret == null) && device.swipe(centerXinBounds, centerYinBounds, centerXinBounds, centerYinBounds + height, 10));
+                    while (device.swipe(centerXinBounds, centerYinBounds, centerXinBounds + width, centerYinBounds, 10))
+                        ;
+                }
+                while ((ret == null) && device.swipe(centerXinBounds, centerYinBounds, centerXinBounds, centerYinBounds + height, 10));
             }
         } catch (UiObjectNotFoundException e) {
 
