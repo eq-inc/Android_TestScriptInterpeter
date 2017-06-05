@@ -1,0 +1,171 @@
+{
+	"test": [
+		{
+			"testApplicationId": "air.jp.globalgear.kaihi",
+			"testProcedures": [
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "5000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "85%"
+						},
+						{
+							"name": "PositionY",
+							"value": "25%"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "3000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "50%"
+						},
+						{
+							"name": "PositionY",
+							"value": "75%"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "3000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "25%"
+						},
+						{
+							"name": "PositionY",
+							"value": "25%"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "3000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "25%"
+						},
+						{
+							"name": "PositionY",
+							"value": "25%"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "2000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "50%"
+						},
+						{
+							"name": "PositionY",
+							"value": "55%"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "1000"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "50%"
+						},
+						{
+							"name": "PositionY",
+							"value": "55%"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "1000"
+						}
+					]
+				},
+				{
+					"type": "drag",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "10%"
+						},
+						{
+							"name": "PositionY",
+							"value": "85%"
+						},
+						{
+							"name": "SizeX",
+							"value": "15%"
+						},
+						{
+							"name": "SizeY",
+							"value": "-20%"
+						}
+					]
+				}
+			]
+		}
+	]
+}
