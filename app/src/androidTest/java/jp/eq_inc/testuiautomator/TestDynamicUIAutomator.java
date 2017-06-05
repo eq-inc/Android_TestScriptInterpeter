@@ -3,6 +3,7 @@ package jp.eq_inc.testuiautomator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.RemoteException;
 import android.support.test.InstrumentationRegistry;
@@ -51,6 +52,8 @@ import static org.junit.Assert.assertTrue;
 @SdkSuppress(minSdkVersion = 18)
 public class TestDynamicUIAutomator {
     private static final String TAG = TestDynamicUIAutomator.class.getSimpleName();
+    private static final String ASSET_FILE_PREFIX = "file:///android_asset/";
+    private static final String PARAM_STRING_CONFIG_FILEPATH = "config_file";
     private static final String TEST_CONFIG_FILE_NAME = "ui_automator.json";
     private static final String EXTERNAL_TEST_CONFIG_FILE_PATH = Environment.getExternalStorageDirectory() + File.separator + TEST_CONFIG_FILE_NAME;
 
@@ -62,7 +65,15 @@ public class TestDynamicUIAutomator {
 
     @Before
     public void start() {
-        if (readConfig()) {
+        String configFilePath = EXTERNAL_TEST_CONFIG_FILE_PATH;
+        Bundle arguments = InstrumentationRegistry.getArguments();
+        if (arguments != null) {
+            if (arguments.containsKey(PARAM_STRING_CONFIG_FILEPATH)) {
+                configFilePath = arguments.getString(PARAM_STRING_CONFIG_FILEPATH);
+            }
+        }
+
+        if (readConfig(configFilePath)) {
             // Initialize UiDevice instance
             mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
 
@@ -96,7 +107,13 @@ public class TestDynamicUIAutomator {
             for (ConfigData.TestData test : mConfigData.test) {
                 // Launch the app
                 Context context = InstrumentationRegistry.getContext();
-                final Intent intent = context.getPackageManager().getLaunchIntentForPackage(test.testApplicationId);
+                Intent intent = null;
+                if (test.testActivity == null || test.testActivity.length() == 0) {
+                    intent = context.getPackageManager().getLaunchIntentForPackage(test.testApplicationId);
+                } else {
+                    intent = new Intent();
+                    intent.setClassName(test.testApplicationId, test.testActivity);
+                }
 
                 if (intent != null) {
                     // Clear out any previous instances
@@ -121,12 +138,14 @@ public class TestDynamicUIAutomator {
                             assertTrue(false);
                         } catch (UiAutomatorException e) {
                             e.printStackTrace();
+                            assertTrue(false);
                         } catch (NoSuchMethodException e) {
                             e.printStackTrace();
                         } catch (InvocationTargetException e) {
                             e.printStackTrace();
                         } catch (IllegalAccessException e) {
                             e.printStackTrace();
+                            assertTrue(false);
                         }
                     }
                 } else {
@@ -145,9 +164,9 @@ public class TestDynamicUIAutomator {
         }
     }
 
-    private boolean readConfig() {
+    private boolean readConfig(String configFilePath) {
         boolean ret = false;
-        File configFile = new File(EXTERNAL_TEST_CONFIG_FILE_PATH);
+        File configFile = new File(configFilePath);
         InputStream configInputStream = null;
 
         if (configFile.exists()) {
@@ -157,9 +176,14 @@ public class TestDynamicUIAutomator {
                 e.printStackTrace();
             }
         } else {
+            String tempConfigFilePath = configFilePath;
+
+            if (tempConfigFilePath.toLowerCase().startsWith(ASSET_FILE_PREFIX)) {
+                tempConfigFilePath = tempConfigFilePath.substring(ASSET_FILE_PREFIX.length());
+            }
             AssetManager assetManager = InstrumentationRegistry.getContext().getAssets();
             try {
-                configInputStream = assetManager.open(TEST_CONFIG_FILE_NAME);
+                configInputStream = assetManager.open(tempConfigFilePath);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -180,63 +204,6 @@ public class TestDynamicUIAutomator {
         }
 
         return ret;
-    }
-
-    private void procedureTest(ConfigData.TestProcedure procedure) throws UiAutomatorException {
-        if (procedure != null) {
-            if (procedure.needUiObject()) {
-                UiObject item = procedure.findUiObject(mDevice);
-
-                if (item != null) {
-                    if ((procedure.testParams != null) && (procedure.testParams.length > 0)) {
-                        for (ConfigData.TestParameter testParam : procedure.testParams) {
-                            ConfigData.ParameterType paramType = ConfigData.ParameterType.value(testParam.name);
-
-                            try {
-                                switch (paramType) {
-                                    case Checkable:
-                                        Assert.assertEquals(item.isCheckable(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Checked:
-                                        Assert.assertEquals(item.isChecked(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Clickable:
-                                        Assert.assertEquals(item.isClickable(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Enabled:
-                                        Assert.assertEquals(item.isEnabled(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Focusable:
-                                        Assert.assertEquals(item.isFocusable(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Focused:
-                                        Assert.assertEquals(item.isFocused(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case LongClickable:
-                                        Assert.assertEquals(item.isLongClickable(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Scrollable:
-                                        Assert.assertEquals(item.isScrollable(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Selected:
-                                        Assert.assertEquals(item.isSelected(), (boolean) Boolean.valueOf(testParam.value));
-                                        break;
-                                    case Text:
-                                        Assert.assertTrue(UiObjectUtil.existTargetText(item, testParam.value, false));
-                                        break;
-                                }
-                            } catch (UiObjectNotFoundException e) {
-                                IllegalParamException.throwException(e, procedure, "testParams has no parameters");
-                            }
-                        }
-                    } else {
-                        IllegalParamException.throwException(procedure, "testParams has no parameters");
-                    }
-                } else {
-                    TestAbortException.throwException(procedure, "target UI item is not in screen: \n" + procedure);
-                }
-            }
-        }
     }
 
     private void procedureClick(ConfigData.TestProcedure procedure) throws UiAutomatorException {
@@ -268,6 +235,77 @@ public class TestDynamicUIAutomator {
         }
     }
 
+    private void procedureClickSystemKey(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure.targetItem != null && procedure.targetItem.itemText != null) {
+            switch (ConfigData.SystemKey.value(procedure.targetItem.itemText)) {
+                case Back:
+                    if (!mDevice.pressBack()) {
+                        Log.e(TAG, "press back fail");
+                    }
+                    break;
+                case Delete:
+                    if (!mDevice.pressDelete()) {
+                        Log.e(TAG, "press delete fail");
+                    }
+                    break;
+                case DPadCenter:
+                    if (!mDevice.pressDPadCenter()) {
+                        Log.e(TAG, "press dpad center fail");
+                    }
+                    break;
+                case DPadDown:
+                    if (!mDevice.pressDPadDown()) {
+                        Log.e(TAG, "press dpad down fail");
+                    }
+                    break;
+                case DPadLeft:
+                    if (!mDevice.pressDPadLeft()) {
+                        Log.e(TAG, "press dpad left fail");
+                    }
+                    break;
+                case DPadRight:
+                    if (!mDevice.pressDPadRight()) {
+                        Log.e(TAG, "press dpad right fail");
+                    }
+                    break;
+                case DPadUp:
+                    if (!mDevice.pressDPadUp()) {
+                        Log.e(TAG, "press dpad up fail");
+                    }
+                    break;
+                case Enter:
+                    if (!mDevice.pressEnter()) {
+                        Log.e(TAG, "press enter fail");
+                    }
+                    break;
+                case Home:
+                    if (!mDevice.pressHome()) {
+                        Log.e(TAG, "press home fail");
+                    }
+                    break;
+                case Menu:
+                    if (!mDevice.pressMenu()) {
+                        Log.e(TAG, "press menu fail");
+                    }
+                    break;
+                case RecentApps:
+                    try {
+                        if (!mDevice.pressRecentApps()) {
+                            Log.e(TAG, "press recent apps fail");
+                        }
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case Search:
+                    if (!mDevice.pressSearch()) {
+                        Log.e(TAG, "press search fail");
+                    }
+                    break;
+            }
+        }
+    }
+
     private void procedureDrag(ConfigData.TestProcedure procedure) throws UiAutomatorException {
         if (procedure != null) {
             if (procedure.needUiObject()) {
@@ -280,7 +318,7 @@ public class TestDynamicUIAutomator {
                         IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
                     }
                 }
-            }else{
+            } else {
                 Context context = InstrumentationRegistry.getContext();
                 ConfigData.TestParameter testParamPositionX = procedure.getParam(ConfigData.ParameterType.PositionX);
                 ConfigData.TestParameter testParamPositionY = procedure.getParam(ConfigData.ParameterType.PositionY);
@@ -314,6 +352,65 @@ public class TestDynamicUIAutomator {
         }
     }
 
+    private void procedureDumpWindowHierarchy(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            File dumpDirectory = new File(getExternalApplicationDirectory() + File.separator + "dump");
+
+            if (!dumpDirectory.exists()) {
+                if (!dumpDirectory.mkdirs()) {
+                    try {
+                        mDevice.executeShellCommand("mkdir -p " + dumpDirectory.getAbsolutePath());
+                    } catch (IOException e) {
+                        UiAutomatorException.throwException(e, procedure, e.toString());
+                    }
+                }
+            }
+
+            StringBuilder filePathBuilder = new StringBuilder(dumpDirectory.getAbsolutePath() + File.separator + getCurrentDateText(true, "", "", "", ""));
+            ConfigData.TestParameter testSuffixParam = procedure.getParam(ConfigData.ParameterType.Suffix);
+            if ((testSuffixParam != null) && (testSuffixParam.value != null) && (testSuffixParam.value.length() > 0)) {
+                filePathBuilder.append("_").append(testSuffixParam.value).append(".txt");
+            } else {
+                filePathBuilder.append(".txt");
+            }
+
+            try {
+                mDevice.dumpWindowHierarchy(new File(filePathBuilder.toString()));
+            } catch (IOException e) {
+                UiAutomatorException.throwException(e, procedure, e.toString());
+            }
+        }
+    }
+
+    private void procedureFreezeOrientateScreen(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            try {
+                mDevice.freezeRotation();
+            } catch (RemoteException e) {
+                UiAutomatorException.throwException(e, procedure, e.getLocalizedMessage());
+            }
+        }
+    }
+
+    private void procedureInputText(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            UiObject item = procedure.findUiObject(mDevice);
+
+            if (item != null) {
+                try {
+                    ConfigData.TestParameter inputTextParam = procedure.getParam(ConfigData.ParameterType.Text);
+                    if (inputTextParam != null) {
+                        item.setText(inputTextParam.value);
+                    } else {
+                        IllegalParamException.throwException(procedure, "not found input text parameter: " + procedure.toString());
+                    }
+                } catch (UiObjectNotFoundException e) {
+                    IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
+                }
+            }
+        }
+    }
+
     private void procedureLongClick(ConfigData.TestProcedure procedure) throws UiAutomatorException {
         if (procedure != null) {
             UiObject item = procedure.findUiObject(mDevice);
@@ -330,75 +427,144 @@ public class TestDynamicUIAutomator {
 
     private void procedureScreenShot(ConfigData.TestProcedure procedure) throws UiAutomatorException {
         if (procedure != null) {
-            File screenshotSaveDir = new File(Environment.getExternalStorageDirectory() + File.separator + "Android/data/" + InstrumentationRegistry.getContext().getPackageName() + File.separator + "screenshots");
+            File screenshotSaveDir = new File(getExternalApplicationDirectory() + File.separator + "screenshots");
 
             if (!screenshotSaveDir.exists()) {
                 if (!screenshotSaveDir.mkdirs()) {
                     try {
                         mDevice.executeShellCommand("mkdir -p " + screenshotSaveDir.getAbsolutePath());
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        UiAutomatorException.throwException(e, procedure, e.toString());
                     }
                 }
             }
 
-            StringBuilder commandBuilder = new StringBuilder();
-            commandBuilder.append("screencap -p ").append(screenshotSaveDir.getAbsolutePath()).append(File.separator);
-            commandBuilder.append(getCurrentDateText(true, "", "", "", ""));
-
+            StringBuilder filePathBuilder = new StringBuilder(screenshotSaveDir.getAbsolutePath() + File.separator + getCurrentDateText(true, "", "", "", ""));
             ConfigData.TestParameter testSuffixParam = procedure.getParam(ConfigData.ParameterType.Suffix);
             if ((testSuffixParam != null) && (testSuffixParam.value != null) && (testSuffixParam.value.length() > 0)) {
-                commandBuilder.append("_").append(testSuffixParam.value).append(".png");
+                filePathBuilder.append("_").append(testSuffixParam.value).append(".png");
             } else {
-                commandBuilder.append(".png");
+                filePathBuilder.append(".png");
             }
 
+            float scale = 1.0f;
+            ConfigData.TestParameter testScaleParam = procedure.getParam(ConfigData.ParameterType.Scale);
+            if (testScaleParam != null) {
+                try {
+                    scale = Float.valueOf(testScaleParam.value);
+                } catch (NumberFormatException e) {
+                    IllegalParamException.throwException(e, procedure, null);
+                }
+            }
+
+            int quality = 100;
+            ConfigData.TestParameter testQualityParam = procedure.getParam(ConfigData.ParameterType.Quality);
+            if (testQualityParam != null) {
+                try {
+                    quality = Integer.valueOf(testQualityParam.value);
+                } catch (NumberFormatException e) {
+                    IllegalParamException.throwException(e, procedure, null);
+                }
+            }
+
+            mDevice.takeScreenshot(new File(filePathBuilder.toString()), scale, quality);
+        }
+    }
+
+    private void procedureScreenRotateLeft(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
             try {
-                mDevice.executeShellCommand(commandBuilder.toString());
-            } catch (IOException e) {
-                UiAutomatorException.throwException(e, procedure, e.toString());
+                mDevice.setOrientationLeft();
+            } catch (RemoteException e) {
+                UiAutomatorException.throwException(e, procedure, e.getLocalizedMessage());
+            }
+        }
+    }
+
+    private void procedureScreenRotateNatural(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            try {
+                mDevice.setOrientationNatural();
+            } catch (RemoteException e) {
+                UiAutomatorException.throwException(e, procedure, e.getLocalizedMessage());
+            }
+        }
+    }
+
+    private void procedureScreenRotateRight(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            try {
+                mDevice.setOrientationRight();
+            } catch (RemoteException e) {
+                UiAutomatorException.throwException(e, procedure, e.getLocalizedMessage());
             }
         }
     }
 
     private void procedureSelectItem(ConfigData.TestProcedure procedure) throws UiAutomatorException {
-        // Spinnerからのドロップダウンメニューの中身を選択する場合のルート
-        // この場合は選択が困難なため、Dpadを疑似的に使用したようにふるまう。
-        // ただし、最初のDpadDownはtouch -> keyモードへの切り替えとして消費されるので、1回多く押下させる
-        ConfigData.TestParameter testParam = procedure.getParam(ConfigData.ParameterType.Index);
-        if (testParam != null) {
-            int keyDownDpadDownCount = 0;
-
-            try {
-                keyDownDpadDownCount = Integer.valueOf(testParam.value);
-
-                for (int i = 0; i < (keyDownDpadDownCount + 1); i++) {
-                    mDevice.pressDPadDown();
+        if (procedure != null) {
+            if (procedure.needUiObject()) {
+                UiObject item = procedure.findUiObject(mDevice);
+                ConfigData.TestParameter testParam = procedure.getParam(ConfigData.ParameterType.Index);
+                if (testParam != null) {
+                    IllegalParamException.throwException(procedure, "unsupport \"index\" parameter on selectItem with specific UiObject");
                 }
-                mDevice.pressDPadCenter();
-            } catch (NumberFormatException e) {
-                IllegalParamException.throwException(e, procedure, "value of Index parameter is not a integer number: " + procedure.toString());
-            }
-            return;
-        }
 
-        testParam = procedure.getParam(ConfigData.ParameterType.Text);
-        if (testParam != null) {
-            while (true) {
-                mDevice.pressDPadDown();
-                UiObject childUiObject = mDevice.findObject(new UiSelector().selected(true));
-                if (childUiObject == null || !childUiObject.exists()) {
-                    break;
-                } else {
-                    UiObjectUtil.dumpUiObject(childUiObject);
-                    if (UiObjectUtil.existTargetText(childUiObject, testParam.value, false)) {
-                        mDevice.pressDPadCenter();
-                        break;
+                testParam = procedure.getParam(ConfigData.ParameterType.Text);
+                if (testParam != null) {
+                    try {
+                        if (item.isScrollable()) {
+                            UiObject targetChildObject = UiObjectUtil.findUiObjectFromScrollable(item, testParam.value);
+                            if (targetChildObject != null) {
+                                targetChildObject.click();
+                            }
+                        }
+                    } catch (UiObjectNotFoundException e) {
+                        UiAutomatorException.throwException(e, procedure, e.toString());
                     }
+
+                    return;
+                }
+            } else {
+                // Spinnerからのドロップダウンメニューの中身を選択する場合のルート
+                // この場合は選択が困難なため、Dpadを疑似的に使用したようにふるまう。
+                // ただし、最初のDpadDownはtouch -> keyモードへの切り替えとして消費されるので、1回多く押下させる
+                ConfigData.TestParameter testParam = procedure.getParam(ConfigData.ParameterType.Index);
+                if (testParam != null) {
+                    int keyDownDpadDownCount = 0;
+
+                    try {
+                        keyDownDpadDownCount = Integer.valueOf(testParam.value);
+
+                        for (int i = 0; i < (keyDownDpadDownCount + 1); i++) {
+                            mDevice.pressDPadDown();
+                        }
+                        mDevice.pressDPadCenter();
+                    } catch (NumberFormatException e) {
+                        IllegalParamException.throwException(e, procedure, "value of Index parameter is not a integer number: " + procedure.toString());
+                    }
+                    return;
+                }
+
+                testParam = procedure.getParam(ConfigData.ParameterType.Text);
+                if (testParam != null) {
+                    while (true) {
+                        mDevice.pressDPadDown();
+                        UiObject childUiObject = mDevice.findObject(new UiSelector().selected(true));
+                        if (childUiObject == null || !childUiObject.exists()) {
+                            break;
+                        } else {
+                            UiObjectUtil.dumpUiObject(childUiObject);
+                            if (UiObjectUtil.existTargetText(childUiObject, testParam.value, false)) {
+                                mDevice.pressDPadCenter();
+                                break;
+                            }
+                        }
+                    }
+
+                    return;
                 }
             }
-
-            return;
         }
     }
 
@@ -636,75 +802,75 @@ public class TestDynamicUIAutomator {
         }
     }
 
-    private void procedureClickSystemKey(ConfigData.TestProcedure procedure) throws UiAutomatorException {
-        if (procedure.targetItem != null && procedure.targetItem.itemText != null) {
-            switch (ConfigData.SystemKey.value(procedure.targetItem.itemText)) {
-                case Back:
-                    if (!mDevice.pressBack()) {
-                        Log.e(TAG, "press back fail");
-                    }
-                    break;
-                case Delete:
-                    if (!mDevice.pressDelete()) {
-                        Log.e(TAG, "press delete fail");
-                    }
-                    break;
-                case DPadCenter:
-                    if (!mDevice.pressDPadCenter()) {
-                        Log.e(TAG, "press dpad center fail");
-                    }
-                    break;
-                case DPadDown:
-                    if (!mDevice.pressDPadDown()) {
-                        Log.e(TAG, "press dpad down fail");
-                    }
-                    break;
-                case DPadLeft:
-                    if (!mDevice.pressDPadLeft()) {
-                        Log.e(TAG, "press dpad left fail");
-                    }
-                    break;
-                case DPadRight:
-                    if (!mDevice.pressDPadRight()) {
-                        Log.e(TAG, "press dpad right fail");
-                    }
-                    break;
-                case DPadUp:
-                    if (!mDevice.pressDPadUp()) {
-                        Log.e(TAG, "press dpad up fail");
-                    }
-                    break;
-                case Enter:
-                    if (!mDevice.pressEnter()) {
-                        Log.e(TAG, "press enter fail");
-                    }
-                    break;
-                case Home:
-                    if (!mDevice.pressHome()) {
-                        Log.e(TAG, "press home fail");
-                    }
-                    break;
-                case Menu:
-                    if (!mDevice.pressMenu()) {
-                        Log.e(TAG, "press menu fail");
-                    }
-                    break;
-                case RecentApps:
-                    try {
-                        if (!mDevice.pressRecentApps()) {
-                            Log.e(TAG, "press recent apps fail");
+    private void procedureTest(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            if (procedure.needUiObject()) {
+                UiObject item = procedure.findUiObject(mDevice);
+
+                if (item != null) {
+                    if ((procedure.testParams != null) && (procedure.testParams.length > 0)) {
+                        for (ConfigData.TestParameter testParam : procedure.testParams) {
+                            ConfigData.ParameterType paramType = ConfigData.ParameterType.value(testParam.name);
+
+                            try {
+                                switch (paramType) {
+                                    case Checkable:
+                                        Assert.assertEquals(item.isCheckable(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Checked:
+                                        Assert.assertEquals(item.isChecked(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Clickable:
+                                        Assert.assertEquals(item.isClickable(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Enabled:
+                                        Assert.assertEquals(item.isEnabled(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Focusable:
+                                        Assert.assertEquals(item.isFocusable(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Focused:
+                                        Assert.assertEquals(item.isFocused(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case LongClickable:
+                                        Assert.assertEquals(item.isLongClickable(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Scrollable:
+                                        Assert.assertEquals(item.isScrollable(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Selected:
+                                        Assert.assertEquals(item.isSelected(), (boolean) Boolean.valueOf(testParam.value));
+                                        break;
+                                    case Text:
+                                        Assert.assertTrue(UiObjectUtil.existTargetText(item, testParam.value, false));
+                                        break;
+                                }
+                            } catch (UiObjectNotFoundException e) {
+                                IllegalParamException.throwException(e, procedure, "testParams has no parameters");
+                            }
                         }
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
+                    } else {
+                        IllegalParamException.throwException(procedure, "testParams has no parameters");
                     }
-                    break;
-                case Search:
-                    if (!mDevice.pressSearch()) {
-                        Log.e(TAG, "press search fail");
-                    }
-                    break;
+                } else {
+                    TestAbortException.throwException(procedure, "target UI item is not in screen: \n" + procedure);
+                }
             }
         }
+    }
+
+    private void procedureUnFreezeOrientateScreen(ConfigData.TestProcedure procedure) throws UiAutomatorException {
+        if (procedure != null) {
+            try {
+                mDevice.unfreezeRotation();
+            } catch (RemoteException e) {
+                UiAutomatorException.throwException(e, procedure, e.getLocalizedMessage());
+            }
+        }
+    }
+
+    private static String getExternalApplicationDirectory() {
+        return Environment.getExternalStorageDirectory() + File.separator + "Android/data/" + InstrumentationRegistry.getContext().getPackageName();
     }
 
     private static String getCurrentDateText(boolean enableZeroPadding, String dateSeparator, String dateTimeSeparator, String timeSeparator, String milliSecSeparator) {
@@ -717,7 +883,7 @@ public class TestDynamicUIAutomator {
         dateTextBuilder
                 .append(String.format(fourPhraseFormat, currentCalendar.get(Calendar.YEAR)))
                 .append(dateSeparator)
-                .append(String.format(twoPhraseFormat, currentCalendar.get(Calendar.MONTH)))
+                .append(String.format(twoPhraseFormat, currentCalendar.get(Calendar.MONTH) + 1))
                 .append(dateSeparator)
                 .append(String.format(twoPhraseFormat, currentCalendar.get(Calendar.DAY_OF_MONTH)))
                 .append(dateTimeSeparator)

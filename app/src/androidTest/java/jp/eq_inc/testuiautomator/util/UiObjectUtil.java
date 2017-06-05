@@ -1,5 +1,8 @@
 package jp.eq_inc.testuiautomator.util;
 
+import android.graphics.Rect;
+import android.support.test.InstrumentationRegistry;
+import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
@@ -8,6 +11,64 @@ import android.util.Log;
 import java.util.ArrayList;
 
 public class UiObjectUtil {
+    public static UiObject findUiObjectFromScrollable(UiObject scrollableUiObject, String targetText) {
+        UiObject ret = null;
+
+        try {
+            if (scrollableUiObject.isScrollable()) {
+                UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+                Rect scrollableUiObjectBounds = scrollableUiObject.getBounds();
+                int centerXinBounds = scrollableUiObjectBounds.centerX();
+                int centerYinBounds = scrollableUiObjectBounds.centerY();
+                int width = scrollableUiObjectBounds.width();
+                int height = scrollableUiObjectBounds.height();
+
+                int childCount = scrollableUiObject.getChildCount();
+                if (childCount > 0) {
+                    UiObject childObject = scrollableUiObject.getChild(new UiSelector().index(0));
+                    Rect childBounds = childObject.getBounds();
+
+                    // 一旦左上にスクロールしてしまう
+                    int positionCount = 1;
+                    while (true) {
+                        device.swipe(centerXinBounds, centerYinBounds, centerXinBounds, centerYinBounds + positionCount * 100, 10);
+                        device.swipe(centerXinBounds, centerYinBounds, centerXinBounds + positionCount * 100, centerYinBounds, 10);
+
+                        Rect newChildBounds = childObject.getBounds();
+                        if (newChildBounds.equals(childBounds)) {
+                            break;
+                        } else {
+                            childBounds = newChildBounds;
+                            positionCount++;
+                        }
+                    }
+                }
+
+                do {
+                    do {
+                        for (int i = 0; i < childCount; i++) {
+                            UiObject childObject = scrollableUiObject.getChild(new UiSelector().index(i));
+                            if (UiObjectUtil.existTargetText(childObject, targetText, false)) {
+                                ret = childObject;
+                                break;
+                            }
+                        }
+                    }
+                    while ((ret == null) && device.swipe(centerXinBounds, centerYinBounds, centerXinBounds - width, centerYinBounds, 10));
+
+                    // 元の位置に戻す
+                    while (device.swipe(centerXinBounds, centerYinBounds, centerXinBounds + width, centerYinBounds, 10))
+                        ;
+                }
+                while ((ret == null) && device.swipe(centerXinBounds, centerYinBounds, centerXinBounds, centerYinBounds + height, 10));
+            }
+        } catch (UiObjectNotFoundException e) {
+
+        }
+
+        return ret;
+    }
+
     public static String[] getAllText(UiObject uiObject) {
         ArrayList<String> ret = new ArrayList<String>();
 
@@ -127,28 +188,28 @@ public class UiObjectUtil {
         return ret;
     }
 
-    public static void dumpUiObject(UiObject uiObject){
+    public static void dumpUiObject(UiObject uiObject) {
         StringBuilder dumpBuilder = new StringBuilder();
         innerDumpUiObject(uiObject, dumpBuilder, 0);
         Log.d(UiObjectUtil.class.getSimpleName(), dumpBuilder.toString());
     }
 
-    private static void innerDumpUiObject(UiObject uiObject, StringBuilder dumpBuilder, int indent){
+    private static void innerDumpUiObject(UiObject uiObject, StringBuilder dumpBuilder, int indent) {
         try {
             String text = uiObject.getText();
             StringBuilder indentBuilder = new StringBuilder();
-            for(int i=0; i<indent; i++){
+            for (int i = 0; i < indent; i++) {
                 indentBuilder.append(" ");
             }
             dumpBuilder.append(indentBuilder).append("text: ").append(text).append("\n");
 
             int childCount = uiObject.getChildCount();
-            if(childCount > 0){
-                for(int i=0; i<childCount; i++){
+            if (childCount > 0) {
+                for (int i = 0; i < childCount; i++) {
                     innerDumpUiObject(uiObject.getChild(new UiSelector().index(i)), dumpBuilder, indent + 1);
                 }
             }
-        }catch (UiObjectNotFoundException e){
+        } catch (UiObjectNotFoundException e) {
 
         }
     }

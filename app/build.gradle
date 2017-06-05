@@ -25,18 +25,8 @@ repositories {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'jp.co.thcomp:android_utility:1.0.+'
-    // Set this dependency to use JUnit 4 rules
-    // Set this dependency to build and run Espresso tests
-    //androidTestCompile 'com.android.support.test.espresso:espresso-core:2.2.1'
-    // Set this dependency to build and run UI Automator tests
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
-    compile 'com.android.support:design:25.3.1'
     testCompile 'junit:junit:4.12'
-    androidTestCompile 'com.android.support:appcompat-v7:25.3.1'
     androidTestCompile 'com.android.support.test:runner:0.4'
-    androidTestCompile 'com.android.support.test:rules:0.4'
     androidTestCompile 'com.android.support.test.uiautomator:uiautomator-v18:2.1.2'
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile 'com.google.code.gson:gson:2.8.0'
