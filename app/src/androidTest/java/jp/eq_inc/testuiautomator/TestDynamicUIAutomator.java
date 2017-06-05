@@ -21,6 +21,7 @@ import com.google.gson.Gson;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,8 +34,6 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Calendar;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import jp.eq_inc.testuiautomator.data.ConfigData;
 import jp.eq_inc.testuiautomator.exception.IllegalParamException;
@@ -61,7 +60,7 @@ public class TestDynamicUIAutomator {
     private static final int SCREEN_POLLING_INTERVAL_MS = 100;
     private UiDevice mDevice;
     private ConfigData mConfigData;
-    private String mRunningScreenRecoderProcess;
+    private Process mScreenRecordingProcess;
 
     @Before
     public void start() {
@@ -87,19 +86,10 @@ public class TestDynamicUIAutomator {
         }
     }
 
-//    @After
-//    public void stop() {
-//        if ((mDevice != null) && (mRunningScreenRecoderProcess != null)) {
-//            String processId = getProcessId(mRunningScreenRecoderProcess);
-//
-//            mRunningScreenRecoderProcess = null;
-//            try {
-//                mDevice.executeShellCommand("kill -9 " + processId);
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
+    @After
+    public void stop() {
+        stopScreenRecording();
+    }
 
     @Test
     public void test() {
@@ -151,15 +141,6 @@ public class TestDynamicUIAutomator {
                 } else {
                     Log.e(TAG, "not found application: " + test.testApplicationId);
                 }
-            }
-
-            if (mRunningScreenRecoderProcess != null) {
-                try {
-                    mDevice.executeShellCommand("kill -9 " + mRunningScreenRecoderProcess);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mRunningScreenRecoderProcess = null;
             }
         }
     }
@@ -646,84 +627,62 @@ public class TestDynamicUIAutomator {
     }
 
     private void procedureStartScreenRecord(final ConfigData.TestProcedure procedure) throws UiAutomatorException {
-//        if (procedure != null) {
-//            synchronized (TestDynamicUIAutomator.this) {
-//                if (mRunningScreenRecoderProcess == null) {
-//                    new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            synchronized (TestDynamicUIAutomator.this) {
-//                                if (mRunningScreenRecoderProcess == null) {
-//                                    mRunningScreenRecoderProcess = String.valueOf(Process.myPid());
-//                                    mRunningScreenRecoderProcess = String.valueOf(Process.myTid());
-//                                    File screenrecordSaveDir = new File(Environment.getExternalStorageDirectory() + File.separator + "Android/data/" + InstrumentationRegistry.getContext().getPackageName() + File.separator + "screenrecords");
-//
-//                                    if (!screenrecordSaveDir.exists()) {
-//                                        if (!screenrecordSaveDir.mkdirs()) {
-//                                            try {
-//                                                mDevice.executeShellCommand("mkdir -p " + screenrecordSaveDir.getAbsolutePath());
-//                                            } catch (IOException e) {
-//                                                e.printStackTrace();
-//                                            }
-//                                        }
-//                                    }
-//
-//                                    StringBuilder commandBuilder = new StringBuilder();
-//                                    commandBuilder.append("screenrecord ");
-//
-//                                    if ((procedure.testParams != null) && (procedure.testParams.length > 0)) {
-//                                        for (ConfigData.TestParameter testParam : procedure.testParams) {
-//                                            String lowerTestParamName = testParam.name.toLowerCase();
-//                                            boolean matched = false;
-//
-//                                            for (ConfigData.SupportScreenRecordParameter param : ConfigData.SupportScreenRecordParameter.values()) {
-//                                                if (lowerTestParamName.equals(param.paramName())) {
-//                                                    matched = true;
-//                                                    break;
-//                                                }
-//                                            }
-//
-//                                            if (matched) {
-//                                                commandBuilder.append("--").append(lowerTestParamName).append(" ").append(testParam.value).append(" ");
-//                                            }
-//                                        }
-//                                    }
-//
-//                                    commandBuilder.append(screenrecordSaveDir.getAbsolutePath()).append(File.separator);
-//                                    commandBuilder.append(getCurrentDateText(true, "", "", "", ""));
-//
-//                                    ConfigData.TestParameter testSuffixParam = procedure.getParam(ConfigData.ParameterType.Suffix);
-//                                    if ((testSuffixParam != null) && (testSuffixParam.value != null) && (testSuffixParam.value.length() > 0)) {
-//                                        commandBuilder.append("_").append(testSuffixParam.value).append(".mp4");
-//                                    } else {
-//                                        commandBuilder.append(".mp4");
-//                                    }
-//
-//                                    try {
-//                                        mDevice.executeShellCommand(commandBuilder.toString());
-//                                    } catch (IOException e) {
-//                                        //UiAutomatorException.throwException(e, procedure, e.toString());
-//                                    } finally {
-//                                        mRunningScreenRecoderProcess = null;
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }).start();
-//                }
-//            }
-//        }
+        if (procedure != null) {
+            if (mScreenRecordingProcess == null) {
+                File screenrecordSaveDir = new File(getExternalApplicationDirectory() + File.separator + "screenrecords");
+
+                if (!screenrecordSaveDir.exists()) {
+                    if (!screenrecordSaveDir.mkdirs()) {
+                        try {
+                            mDevice.executeShellCommand("mkdir -p " + screenrecordSaveDir.getAbsolutePath());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+                final StringBuilder commandBuilder = new StringBuilder();
+                commandBuilder.append("screenrecord ");
+
+                if ((procedure.testParams != null) && (procedure.testParams.length > 0)) {
+                    for (ConfigData.TestParameter testParam : procedure.testParams) {
+                        String lowerTestParamName = testParam.name.toLowerCase();
+                        boolean matched = false;
+
+                        for (ConfigData.SupportScreenRecordParameter param : ConfigData.SupportScreenRecordParameter.values()) {
+                            if (lowerTestParamName.equals(param.paramName())) {
+                                matched = true;
+                                break;
+                            }
+                        }
+
+                        if (matched) {
+                            commandBuilder.append("--").append(lowerTestParamName).append(" ").append(testParam.value).append(" ");
+                        }
+                    }
+                }
+
+                commandBuilder.append(screenrecordSaveDir.getAbsolutePath()).append(File.separator);
+                commandBuilder.append(getCurrentDateText(true, "", "", "", ""));
+
+                ConfigData.TestParameter testSuffixParam = procedure.getParam(ConfigData.ParameterType.Suffix);
+                if ((testSuffixParam != null) && (testSuffixParam.value != null) && (testSuffixParam.value.length() > 0)) {
+                    commandBuilder.append("_").append(testSuffixParam.value).append(".mp4");
+                } else {
+                    commandBuilder.append(".mp4");
+                }
+
+                try {
+                    mScreenRecordingProcess = Runtime.getRuntime().exec(commandBuilder.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void procedureStopScreenRecord(final ConfigData.TestProcedure procedure) throws UiAutomatorException {
-//        if (mRunningScreenRecoderProcess != null) {
-//            try {
-//                mDevice.executeShellCommand("kill -9 " + mRunningScreenRecoderProcess);
-//                mRunningScreenRecoderProcess = null;
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
+        stopScreenRecording();
     }
 
     private void procedureSwipe(ConfigData.TestProcedure procedure) throws UiAutomatorException {
@@ -869,6 +828,13 @@ public class TestDynamicUIAutomator {
         }
     }
 
+    private void stopScreenRecording() {
+        if (mScreenRecordingProcess != null) {
+            mScreenRecordingProcess.destroy();
+            mScreenRecordingProcess = null;
+        }
+    }
+
     private static String getExternalApplicationDirectory() {
         return Environment.getExternalStorageDirectory() + File.separator + "Android/data/" + InstrumentationRegistry.getContext().getPackageName();
     }
@@ -896,18 +862,5 @@ public class TestDynamicUIAutomator {
                 .append(String.format(threePhraseFormat, currentCalendar.get(Calendar.MILLISECOND)));
 
         return dateTextBuilder.toString();
-    }
-
-    private static String getProcessId(String stdoutByBgProcessing) {
-        String ret = null;
-
-        Pattern pattern = Pattern.compile("\\[[0-9]*\\]\\s+([0-9]+)");
-        pattern.split(stdoutByBgProcessing);
-        Matcher matcher = pattern.matcher(stdoutByBgProcessing);
-        if (matcher.matches()) {
-            ret = matcher.group(1);
-        }
-
-        return ret;
     }
 }
