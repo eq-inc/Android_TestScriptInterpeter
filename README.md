@@ -124,26 +124,32 @@ typeで指定された内容を実施するアイテムを指定。<br/>
 
 type毎の設定要否は以下のようになる。
 
-|名称|targetItemの設定要否|備考|
-|:--|:--|:--|
-|Click|任意|設定しない場合はtestParamにてPositionX/PositionYの設定が必要|
-|ClickSystemKey|不要|-|
-|Drag|任意|設定しない場合はtestParamにてPositionX/PositionY/SizeX/SizeYの設定が必要|
-|DumpWindowHierarchy|不要|-|
-|FreezeOrientateScreen|不要|-|
-|InputText|** 必要 **|設定しない場合は処理が行われない|
-|LongClick|任意|設定しない場合はtestParamにてPositionX/PositionYの設定が必要|
-|ScreenShot|不要|-|
-|ScreenRotateLeft|不要|-|
-|ScreenRotateNatural|不要|-|
-|ScreenRotateRight|不要|-|
-|SelectItem|任意|設定しない場合はtestParamにてIndex/Textの設定が必要|
-|Sleep|不要|-|
-|StartScreenRecord|不要|-|
-|StopScreenRecord|不要|-|
-|Swipe|任意|設定しない場合はtestParamにてPositionX/PositionY/SizeX/SizeYの設定が必要|
-|Test|** 必要 **|設定しない場合は処理が行われない|
-|UnFreezeOrientateScreen|不要|-|
+<table border="1">
+<thead>
+<tr><th>名称</th><th>targetItemの設定要否</th><th>備考</th></tr>
+</thead>
+<tbody>
+<tr><td>Click</td><td>任意</td><td>設定しない場合はtestParamにてPositionX/PositionYの設定が必要</td></tr>
+<tr><td>ClickSystemKey</td><td>不要</td><td>-</td></tr>
+<tr><td>Drag</td><td>任意</td><td>設定しない場合はtestParamにてPositionX/PositionY/SizeX/SizeYの設定が必要</td></tr>
+<tr><td>DumpWindowHierarchy</td><td>不要</td><td>-</td></tr>
+<tr><td>FreezeOrientateScreen</td><td>不要</td><td>-</td></tr>
+<tr><td>InputText</td><td><b>必要</b></td><td>設定しない場合は処理が行われない</td></tr>
+<tr><td>LongClick</td><td>任意</td><td>設定しない場合はtestParamにてPositionX/PositionYの設定が必要</td></tr>
+<tr><td>ScreenShot</td><td>不要</td><td>-</td></tr>
+<tr><td>ScreenRotateLeft</td><td>不要</td><td>-</td></tr>
+<tr><td>ScreenRotateNatural</td><td>不要</td><td>-</td></tr>
+<tr><td>ScreenRotateRight</td><td>不要</td><td>-</td></tr>
+<!--tr><td>SelectItem</td><td>任意</td><td>設定しない場合はtestParamにてIndex/Textの設定が必要</td></tr-->
+<tr><td>Sleep</td><td>不要</td><td>-</td></tr>
+<tr><td>StartScreenRecord</td><td>不要</td><td>-</td></tr>
+<tr><td>StopScreenRecord</td><td>不要</td><td>-</td></tr>
+<tr><td>Swipe</td><td>任意</td><td>設定しない場合はtestParamにてPositionX/PositionY/SizeX/SizeYの設定が必要</td></tr>
+<tr><td>Test</td><td><b>必要</b></td><td>設定しない場合は処理が行われない</td></tr>
+<tr><td>UnFreezeOrientateScreen</td><td>不要</td><td>-</td></tr>
+</tbody>
+</table>
+
 
 ##### itemClass
 対象とするView部品のクラス名称を指定。<br/>
@@ -177,10 +183,9 @@ itemClassとの重複設定可能。<br/>
 |Enabled|Test<br/>|対象とする部品のEnabled属性がvalueで指定された値か否かを判定|true / false|
 |Focusable|Test<br/>|対象とする部品のFocusable属性がvalueで指定された値か否かを判定|true / false|
 |Focused|Test<br/>|対象とする部品のFocused属性がvalueで指定された値か否かを判定|true / false|
-|Index|SelectItem<br/>|リスト内の選択するアイテムをインデックス番号にて指定する場合に設定|整数|
 |LongClickable|Test<br/>|対象とする部品のLongClickable属性がvalueで指定された値か否かを判定|true / false|
-|PositionX|Click<br/>Drag<br/>Swipe<br/>|操作する際のX座標。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面横方向のサイズに対する割合|単位付整数(dp / sp / %)|
-|PositionY|Click<br/>Drag<br/>Swipe<br/>|操作する際のY座標。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面縦方向のサイズに対する割合|単位付整数(dp / sp / %)|
+|PositionX|Click<br/>Drag<br/>LongClick<br/>Swipe<br/>|操作する際のX座標。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面横方向のサイズに対する割合|単位付整数(dp / sp / %)|
+|PositionY|Click<br/>Drag<br/>LongClick<br/>Swipe<br/>|操作する際のY座標。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面縦方向のサイズに対する割合|単位付整数(dp / sp / %)|
 |Quality|ScreenShot<br/>|スクリーンショット取得時のQuality(0 ~ 100)。<br/>デフォルト100|0 ~ 100の整数|
 |Scale|ScreenShot<br/>|スクリーンショット取得時のScale(0.0 ~ 1.0)。<br/>デフォルト1.0|0.0 ~ 1.0までの数値|
 |Scrollable|Test<br/>|対象とする部品のScrollable属性がvalueで指定された値か否かを判定|true / false|
@@ -189,7 +194,7 @@ itemClassとの重複設定可能。<br/>
 |SizeY|Drag<br/>Swipe<br/>|操作時の画面縦方向の移動距離などのサイズを設定。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面縦方向のサイズに対する割合|単位付整数(dp / sp / %)|
 |Steps|Drag<br/>Swipe<br/>|操作時のstep数を設定|整数|
 |Suffix|DumpWindowHierarchy<br/>ScreenShot<br/>StartScreenRecord<br/>|保存するファイル名称に付与するsuffixを設定。無指定時はsuffixなし|文字列|
-|Text|ClickSystemKey<br/>SelectItem<br/>Test<br/>|表示したい文字列や表示している文字列に対して検索したい場合などに設定|文字列|
+|Text|ClickSystemKey<br/>InputText<br/>Swipe<br/>Test<br/>|表示したい文字列や表示している文字列に対して検索したい場合などに設定|文字列|
 |TimeMS|Sleep<br/>|一定期間Sleepさせたいときに設定|整数|
 |WaitShowPackage|Sleep<br/>|対象とするパッケージが表示されるまでSleepさせたいときに設定|パッケージ名称|
 |WaitShowItemByResourceId|Sleep<br/>|対象とする部品(リソースID名称にて対象部品を特定)が表示されるまでSleepさせたいときに設定|リソース名称|
@@ -202,6 +207,79 @@ itemClassとの重複設定可能。<br/>
 
 
 # Configファイル例
-## A
 
-## B
+## 設定アプリを起動して、Drawerメニューから「日付と時刻」を選択(Nexus 6P, Android 7.1.2)
+```
+{
+	"test": [
+		{
+			"testApplicationId": "com.android.settings",
+			"testProcedures": [
+				{
+					"type": "swipe",
+					"testParams": [
+						{
+							"name": "PositionX",
+							"value": "2%"
+						},
+						{
+							"name": "PositionY",
+							"value": "50%"
+						},
+						{
+							"name": "SizeX",
+							"value": "100%"
+						},
+						{
+							"name": "SizeY",
+							"value": "0"
+						}
+					]
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "1000"
+						}
+					]
+				},
+				{
+					"type": "swipe",
+					"targetItem": {
+						"itemResourceId": "com.android.settings:id/left_drawer"
+					},
+					"testParams": [
+						{
+							"name": "text",
+							"value": "日付と時刻"
+						}
+					]
+				},
+				{
+					"type": "click",
+					"targetItem": {
+						"itemText": "日付と時刻"
+					}
+				},
+				{
+					"type": "sleep",
+					"testParams": [
+						{
+							"name": "TimeMS",
+							"value": "100"
+						}
+					]
+				},
+				{
+					"type": "ClickSystemKey",
+					"targetItem": {
+						"itemText": "Home"
+					}
+				}
+			]
+		}
+	]
+}
+```
