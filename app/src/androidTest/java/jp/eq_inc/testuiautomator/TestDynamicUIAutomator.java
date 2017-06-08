@@ -55,13 +55,15 @@ public class TestDynamicUIAutomator {
     private static final String ASSET_FILE_PREFIX = "file:///android_asset/";
     private static final String PARAM_STRING_CONFIG_FILEPATH = "config_file";
     private static final String TEST_CONFIG_FILE_NAME = "ui_automator.json";
+    private static final String SCREENRECORDING_FILE_PREFIX = ".__rec__";
     private static final String EXTERNAL_TEST_CONFIG_FILE_PATH = Environment.getExternalStorageDirectory() + File.separator + TEST_CONFIG_FILE_NAME;
 
     private static final int LAUNCH_TIMEOUT = 5000;
     private static final int SCREEN_POLLING_INTERVAL_MS = 100;
     private UiDevice mDevice;
     private ConfigData mConfigData;
-    private Process mScreenRecordingProcess;
+    private Thread mScreenRecordingProcess;
+    private File mScreenRecordingFile;
 
     @Before
     public void start() {
@@ -680,19 +682,41 @@ public class TestDynamicUIAutomator {
                 }
 
                 commandBuilder.append(screenrecordSaveDir.getAbsolutePath()).append(File.separator);
-                commandBuilder.append(getCurrentDateText(true, "", "", "", ""));
+
+                StringBuilder fileNameBuilder = new StringBuilder(SCREENRECORDING_FILE_PREFIX);
+                fileNameBuilder.append(getCurrentDateText(true, "", "", "", ""));
 
                 ConfigData.TestParameter testSuffixParam = procedure.getParam(ConfigData.ParameterType.Suffix);
                 if ((testSuffixParam != null) && (testSuffixParam.value != null) && (testSuffixParam.value.length() > 0)) {
-                    commandBuilder.append("_").append(testSuffixParam.value).append(".mp4");
+                    fileNameBuilder.append("_").append(testSuffixParam.value).append(".mp4");
                 } else {
-                    commandBuilder.append(".mp4");
+                    fileNameBuilder.append(".mp4");
                 }
+                mScreenRecordingFile = new File(screenrecordSaveDir.getAbsolutePath() + File.separator + fileNameBuilder.toString());
+                commandBuilder.append(fileNameBuilder.toString());
 
-                try {
-                    mScreenRecordingProcess = Runtime.getRuntime().exec(commandBuilder.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
+                mScreenRecordingProcess = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.d(TAG, commandBuilder.toString());
+
+                        try {
+                            mDevice.executeShellCommand(commandBuilder.toString());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                            mScreenRecordingProcess = null;
+                            stopScreenRecording();
+                        }
+                    }
+                });
+                // Start直後のStopが追い抜いてしまうことをふせぐために1秒待機
+                synchronized (mScreenRecordingProcess) {
+                    try {
+                        mScreenRecordingProcess.start();
+                        mScreenRecordingProcess.wait(1000);
+                    } catch (InterruptedException e) {
+                    }
                 }
             }
         }
@@ -856,10 +880,8 @@ public class TestDynamicUIAutomator {
     }
 
     private void stopScreenRecording() {
-        if (mScreenRecordingProcess != null) {
-            mScreenRecordingProcess.destroy();
-            mScreenRecordingProcess = null;
-        }
+        mScreenRecordingProcess = null;
+        changeScreenRecordName();
     }
 
     private static String getExternalApplicationDirectory() {
@@ -889,5 +911,38 @@ public class TestDynamicUIAutomator {
                 .append(String.format(threePhraseFormat, currentCalendar.get(Calendar.MILLISECOND)));
 
         return dateTextBuilder.toString();
+    }
+
+    private void changeScreenRecordName() {
+        File tempScreenRecordingFile;
+
+        synchronized (this) {
+            tempScreenRecordingFile = mScreenRecordingFile;
+            mScreenRecordingFile = null;
+        }
+
+        if (tempScreenRecordingFile != null) {
+            String newFileName = tempScreenRecordingFile.getName().replace(SCREENRECORDING_FILE_PREFIX, "");
+            StringBuilder newFilePathBuilder = new StringBuilder();
+            newFilePathBuilder.append(tempScreenRecordingFile.getParent()).append(File.separator).append(newFileName);
+            File newFile = new File(newFilePathBuilder.toString());
+
+            try {
+                StringBuilder commandBuilder = new StringBuilder();
+                commandBuilder.append("cp ").append(tempScreenRecordingFile.getAbsolutePath()).append(" ").append(newFile.getAbsoluteFile());
+                Log.d(TAG, commandBuilder.toString());
+                mDevice.executeShellCommand(commandBuilder.toString());
+            } catch (IOException e) {
+                UiAutomatorException.throwException(e, null, e.getLocalizedMessage());
+            }
+            try {
+                StringBuilder commandBuilder = new StringBuilder();
+                commandBuilder.append("rm ").append(tempScreenRecordingFile.getAbsolutePath());
+                Log.d(TAG, commandBuilder.toString());
+                mDevice.executeShellCommand(commandBuilder.toString());
+            } catch (IOException e) {
+                UiAutomatorException.throwException(e, null, e.getLocalizedMessage());
+            }
+        }
     }
 }
