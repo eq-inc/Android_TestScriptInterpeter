@@ -2,6 +2,8 @@ package jp.eq_inc.testuiautomator.data;
 
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
+import android.support.test.uiautomator.UiObjectNotFoundException;
+import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 
 import java.util.Arrays;
@@ -155,14 +157,16 @@ public class ConfigData {
 
         public UiObject findUiObject(UiDevice device) {
             UiObject ret = null;
+            UiSelector uiSelector = null;
 
             if (targetItem != null) {
                 if (targetItem.itemResourceId != null) {
-                    ret = device.findObject(new UiSelector().resourceId(targetItem.itemResourceId));
+                    uiSelector = new UiSelector().resourceId(targetItem.itemResourceId);
+                    ret = device.findObject(uiSelector);
                 }
 
                 if (ret == null) {
-                    UiSelector uiSelector = new UiSelector();
+                    uiSelector = new UiSelector();
                     if (targetItem.itemText != null && targetItem.itemText.length() > 0) {
                         uiSelector = uiSelector.text(targetItem.itemText);
                     }
@@ -170,6 +174,15 @@ public class ConfigData {
                         uiSelector = uiSelector.className(targetItem.itemClass);
                     }
                     ret = device.findObject(uiSelector);
+                }
+            }
+
+            if(ret != null){
+                try {
+                    if(ret.isScrollable()){
+                        ret = new UiScrollable(uiSelector);
+                    }
+                } catch (UiObjectNotFoundException e) {
                 }
             }
 

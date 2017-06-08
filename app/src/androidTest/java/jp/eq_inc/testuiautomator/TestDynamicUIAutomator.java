@@ -13,6 +13,7 @@ import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObjectNotFoundException;
+import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
 import android.support.test.uiautomator.Until;
 import android.util.Log;
@@ -54,13 +55,15 @@ public class TestDynamicUIAutomator {
     private static final String ASSET_FILE_PREFIX = "file:///android_asset/";
     private static final String PARAM_STRING_CONFIG_FILEPATH = "config_file";
     private static final String TEST_CONFIG_FILE_NAME = "ui_automator.json";
+    private static final String SCREENRECORDING_FILE_PREFIX = ".__rec__";
     private static final String EXTERNAL_TEST_CONFIG_FILE_PATH = Environment.getExternalStorageDirectory() + File.separator + TEST_CONFIG_FILE_NAME;
 
     private static final int LAUNCH_TIMEOUT = 5000;
     private static final int SCREEN_POLLING_INTERVAL_MS = 100;
     private UiDevice mDevice;
     private ConfigData mConfigData;
-    private Process mScreenRecordingProcess;
+    private Thread mScreenRecordingProcess;
+    private File mScreenRecordingFile;
 
     @Before
     public void start() {
@@ -194,7 +197,9 @@ public class TestDynamicUIAutomator {
 
                 if (item != null) {
                     try {
-                        item.click();
+                        if (!item.click()) {
+                            Log.e(TAG, "UiObject.click fails");
+                        }
                     } catch (UiObjectNotFoundException e) {
                         IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
                     }
@@ -402,6 +407,19 @@ public class TestDynamicUIAutomator {
                 } catch (UiObjectNotFoundException e) {
                     IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
                 }
+            } else {
+                Context context = InstrumentationRegistry.getContext();
+                ConfigData.TestParameter testParamPositionX = procedure.getParam(ConfigData.ParameterType.PositionX);
+                ConfigData.TestParameter testParamPositionY = procedure.getParam(ConfigData.ParameterType.PositionY);
+
+                if ((testParamPositionX != null) && (testParamPositionY != null)) {
+                    String posXText = testParamPositionX.value;
+                    String posYText = testParamPositionY.value;
+
+                    float posX = SizeUnitUtil.getPositionX(context, posXText);
+                    float posY = SizeUnitUtil.getPositionY(context, posYText);
+                    mDevice.drag((int) posX, (int) posY, (int) posX, (int) posY, 1000);
+                }
             }
         }
     }
@@ -482,6 +500,7 @@ public class TestDynamicUIAutomator {
         }
     }
 
+    @Deprecated
     private void procedureSelectItem(ConfigData.TestProcedure procedure) throws UiAutomatorException {
         if (procedure != null) {
             if (procedure.needUiObject()) {
@@ -663,19 +682,41 @@ public class TestDynamicUIAutomator {
                 }
 
                 commandBuilder.append(screenrecordSaveDir.getAbsolutePath()).append(File.separator);
-                commandBuilder.append(getCurrentDateText(true, "", "", "", ""));
+
+                StringBuilder fileNameBuilder = new StringBuilder(SCREENRECORDING_FILE_PREFIX);
+                fileNameBuilder.append(getCurrentDateText(true, "", "", "", ""));
 
                 ConfigData.TestParameter testSuffixParam = procedure.getParam(ConfigData.ParameterType.Suffix);
                 if ((testSuffixParam != null) && (testSuffixParam.value != null) && (testSuffixParam.value.length() > 0)) {
-                    commandBuilder.append("_").append(testSuffixParam.value).append(".mp4");
+                    fileNameBuilder.append("_").append(testSuffixParam.value).append(".mp4");
                 } else {
-                    commandBuilder.append(".mp4");
+                    fileNameBuilder.append(".mp4");
                 }
+                mScreenRecordingFile = new File(screenrecordSaveDir.getAbsolutePath() + File.separator + fileNameBuilder.toString());
+                commandBuilder.append(fileNameBuilder.toString());
 
-                try {
-                    mScreenRecordingProcess = Runtime.getRuntime().exec(commandBuilder.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
+                mScreenRecordingProcess = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.d(TAG, commandBuilder.toString());
+
+                        try {
+                            mDevice.executeShellCommand(commandBuilder.toString());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                            mScreenRecordingProcess = null;
+                            stopScreenRecording();
+                        }
+                    }
+                });
+                // Start直後のStopが追い抜いてしまうことをふせぐために1秒待機
+                synchronized (mScreenRecordingProcess) {
+                    try {
+                        mScreenRecordingProcess.start();
+                        mScreenRecordingProcess.wait(1000);
+                    } catch (InterruptedException e) {
+                    }
                 }
             }
         }
@@ -687,48 +728,58 @@ public class TestDynamicUIAutomator {
 
     private void procedureSwipe(ConfigData.TestProcedure procedure) throws UiAutomatorException {
         if (procedure != null) {
+            Context context = InstrumentationRegistry.getContext();
+
             if (procedure.needUiObject()) {
                 UiObject item = procedure.findUiObject(mDevice);
 
-                if (item != null) {
-                    ConfigData.TestParameter param = procedure.getParam(0);
-                    if (param != null) {
-                        ConfigData.ParameterType paramType = ConfigData.ParameterType.value(param.name);
-                        String value = param.value;
+                try {
+                    if (item != null && item.isScrollable()) {
+                        UiScrollable scrollableItem = (UiScrollable) item;
+                        ConfigData.TestParameter param = procedure.getParam(0);
 
-                        if ((paramType != null) && (paramType == ConfigData.ParameterType.SizeX || paramType == ConfigData.ParameterType.SizeY)) {
-                            try {
-                                float valueFloat = Float.valueOf(value);
+                        if (param != null) {
+                            ConfigData.ParameterType paramType = ConfigData.ParameterType.value(param.name);
+                            String value = param.value;
+
+                            if (paramType != null) {
                                 try {
-                                    switch (paramType) {
-                                        case SizeX:
-                                            if (valueFloat >= 0) {
-                                                item.swipeLeft((int) valueFloat);
-                                            } else {
-                                                valueFloat *= -1;
-                                                item.swipeRight((int) valueFloat);
-                                            }
-                                            break;
-                                        case SizeY:
-                                            if (valueFloat >= 0) {
-                                                item.swipeUp((int) valueFloat);
-                                            } else {
-                                                valueFloat *= -1;
-                                                item.swipeDown((int) valueFloat);
-                                            }
-                                            break;
+                                    try {
+                                        float valueFloat = 0f;
+                                        switch (paramType) {
+                                            case Text:
+                                                scrollableItem.scrollTextIntoView(value);
+                                                break;
+                                            case SizeX:
+                                                valueFloat = SizeUnitUtil.getPositionX(context, value);
+                                                if (valueFloat < 0) {
+                                                    scrollableItem.scrollForward(200);
+                                                } else {
+                                                    scrollableItem.scrollBackward(200);
+                                                }
+                                                break;
+                                            case SizeY:
+                                                valueFloat = SizeUnitUtil.getPositionY(context, value);
+                                                if (valueFloat < 0) {
+                                                    scrollableItem.scrollForward(200);
+                                                } else {
+                                                    scrollableItem.scrollBackward(200);
+                                                }
+                                                break;
+                                        }
+                                    } catch (UiObjectNotFoundException e) {
+                                        e.printStackTrace();
                                     }
-                                } catch (UiObjectNotFoundException e) {
+                                } catch (NumberFormatException e) {
                                     e.printStackTrace();
                                 }
-                            } catch (NumberFormatException e) {
-                                e.printStackTrace();
                             }
                         }
                     }
+                } catch (UiObjectNotFoundException e) {
+                    IllegalParamException.throwException(e, procedure, e.getLocalizedMessage());
                 }
             } else {
-                Context context = InstrumentationRegistry.getContext();
                 ConfigData.TestParameter testParamPositionX = procedure.getParam(ConfigData.ParameterType.PositionX);
                 ConfigData.TestParameter testParamPositionY = procedure.getParam(ConfigData.ParameterType.PositionY);
                 ConfigData.TestParameter testParamSizeX = procedure.getParam(ConfigData.ParameterType.SizeX);
@@ -829,10 +880,8 @@ public class TestDynamicUIAutomator {
     }
 
     private void stopScreenRecording() {
-        if (mScreenRecordingProcess != null) {
-            mScreenRecordingProcess.destroy();
-            mScreenRecordingProcess = null;
-        }
+        mScreenRecordingProcess = null;
+        changeScreenRecordName();
     }
 
     private static String getExternalApplicationDirectory() {
@@ -862,5 +911,38 @@ public class TestDynamicUIAutomator {
                 .append(String.format(threePhraseFormat, currentCalendar.get(Calendar.MILLISECOND)));
 
         return dateTextBuilder.toString();
+    }
+
+    private void changeScreenRecordName() {
+        File tempScreenRecordingFile;
+
+        synchronized (this) {
+            tempScreenRecordingFile = mScreenRecordingFile;
+            mScreenRecordingFile = null;
+        }
+
+        if (tempScreenRecordingFile != null) {
+            String newFileName = tempScreenRecordingFile.getName().replace(SCREENRECORDING_FILE_PREFIX, "");
+            StringBuilder newFilePathBuilder = new StringBuilder();
+            newFilePathBuilder.append(tempScreenRecordingFile.getParent()).append(File.separator).append(newFileName);
+            File newFile = new File(newFilePathBuilder.toString());
+
+            try {
+                StringBuilder commandBuilder = new StringBuilder();
+                commandBuilder.append("cp ").append(tempScreenRecordingFile.getAbsolutePath()).append(" ").append(newFile.getAbsoluteFile());
+                Log.d(TAG, commandBuilder.toString());
+                mDevice.executeShellCommand(commandBuilder.toString());
+            } catch (IOException e) {
+                UiAutomatorException.throwException(e, null, e.getLocalizedMessage());
+            }
+            try {
+                StringBuilder commandBuilder = new StringBuilder();
+                commandBuilder.append("rm ").append(tempScreenRecordingFile.getAbsolutePath());
+                Log.d(TAG, commandBuilder.toString());
+                mDevice.executeShellCommand(commandBuilder.toString());
+            } catch (IOException e) {
+                UiAutomatorException.throwException(e, null, e.getLocalizedMessage());
+            }
+        }
     }
 }

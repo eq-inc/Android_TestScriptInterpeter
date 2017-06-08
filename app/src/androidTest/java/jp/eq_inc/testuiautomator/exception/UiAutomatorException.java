@@ -2,7 +2,7 @@ package jp.eq_inc.testuiautomator.exception;
 
 import jp.eq_inc.testuiautomator.data.ConfigData;
 
-public class UiAutomatorException extends Exception {
+public class UiAutomatorException extends RuntimeException {
     protected ConfigData.TestProcedure mCauseByProcedure;
     protected String mAdditionalText;
 
@@ -28,9 +28,9 @@ public class UiAutomatorException extends Exception {
     @Override
     public String toString() {
         if (mAdditionalText != null && mAdditionalText.length() > 0) {
-            return mAdditionalText + "\ncaused by : " + mCauseByProcedure.toString() + "\n" + super.toString();
+            return mAdditionalText + "\ncaused by : " + mCauseByProcedure + "\n" + super.toString();
         } else {
-            return "caused by : " + mCauseByProcedure.toString() + "\n" + super.toString();
+            return "caused by : " + mCauseByProcedure + "\n" + super.toString();
         }
     }
 }
