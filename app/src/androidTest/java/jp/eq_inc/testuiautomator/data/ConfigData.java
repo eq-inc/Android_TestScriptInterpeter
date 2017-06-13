@@ -101,6 +101,8 @@ public class ConfigData {
         Focused,
         Index,
         LongClickable,
+        OffsetX,
+        OffsetY,
         PositionX,
         PositionY,
         Quality,

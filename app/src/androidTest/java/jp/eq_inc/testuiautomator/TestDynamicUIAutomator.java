@@ -3,6 +3,7 @@ package jp.eq_inc.testuiautomator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.RemoteException;
@@ -123,8 +124,6 @@ public class TestDynamicUIAutomator {
                                 String methodName = "procedure" + procedureType.name();
                                 Method procedureMethod = getClass().getDeclaredMethod(methodName, ConfigData.TestProcedure.class);
                                 procedureMethod.invoke(this, procedure);
-                            } else {
-                                UiAutomatorException.throwException(procedure, "unknown process type: " + procedure.type);
                             }
                         } catch (TestAbortException e) {
                             e.printStackTrace();
@@ -196,9 +195,29 @@ public class TestDynamicUIAutomator {
                 UiObject item = procedure.findUiObject(mDevice);
 
                 if (item != null) {
+                    ConfigData.TestParameter testParamOffsetX = procedure.getParam(ConfigData.ParameterType.OffsetX);
+                    ConfigData.TestParameter testParamOffsetY = procedure.getParam(ConfigData.ParameterType.OffsetY);
+
                     try {
-                        if (!item.click()) {
-                            Log.e(TAG, "UiObject.click fails");
+                        if ((testParamOffsetX != null) || (testParamOffsetY != null)) {
+                            // itemの中心からのオフセット位置をクリック
+                            Context context = InstrumentationRegistry.getContext();
+                            Rect bounds = item.getVisibleBounds();
+                            if (bounds != null) {
+                                int centerXOfItem = bounds.centerX();
+                                int centerYOfItem = bounds.centerY();
+                                String offsetXText = testParamOffsetX != null ? testParamOffsetX.value : null;
+                                String offsetYText = testParamOffsetY != null ? testParamOffsetY.value : null;
+
+                                float offsetX = offsetXText != null ? SizeUnitUtil.getPositionX(context, offsetXText) : 0f;
+                                float offsetY = offsetYText != null ? SizeUnitUtil.getPositionY(context, offsetYText) : 0f;
+                                mDevice.click((int) (centerXOfItem + offsetX), (int) (centerYOfItem + offsetY));
+                            }
+                        } else {
+                            // itemをそのままクリック
+                            if (!item.click()) {
+                                Log.e(TAG, "UiObject.click fails");
+                            }
                         }
                     } catch (UiObjectNotFoundException e) {
                         IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
@@ -402,8 +421,32 @@ public class TestDynamicUIAutomator {
             UiObject item = procedure.findUiObject(mDevice);
 
             if (item != null) {
+                ConfigData.TestParameter testParamOffsetX = procedure.getParam(ConfigData.ParameterType.OffsetX);
+                ConfigData.TestParameter testParamOffsetY = procedure.getParam(ConfigData.ParameterType.OffsetY);
+
                 try {
-                    item.longClick();
+                    if ((testParamOffsetX != null) || (testParamOffsetY != null)) {
+                        // itemの中心からのオフセット位置をクリック
+                        Context context = InstrumentationRegistry.getContext();
+                        Rect bounds = item.getVisibleBounds();
+                        if (bounds != null) {
+                            int centerXOfItem = bounds.centerX();
+                            int centerYOfItem = bounds.centerY();
+                            String offsetXText = testParamOffsetX != null ? testParamOffsetX.value : null;
+                            String offsetYText = testParamOffsetY != null ? testParamOffsetY.value : null;
+
+                            float offsetX = offsetXText != null ? SizeUnitUtil.getPositionX(context, offsetXText) : 0f;
+                            float offsetY = offsetYText != null ? SizeUnitUtil.getPositionY(context, offsetYText) : 0f;
+
+                            // UiDeviceにロングクリックが存在しないので、dragにて代用
+                            mDevice.drag((int) (centerXOfItem + offsetX), (int) (centerYOfItem + offsetY), (int) (centerXOfItem + offsetX), (int) (centerYOfItem + offsetY), 1000);
+                        }
+                    } else {
+                        // itemをそのままロングクリック
+                        if (!item.longClick()) {
+                            Log.e(TAG, "UiObject.longClick fails");
+                        }
+                    }
                 } catch (UiObjectNotFoundException e) {
                     IllegalParamException.throwException(e, procedure, "ui object not found: " + procedure.toString());
                 }
@@ -418,6 +461,8 @@ public class TestDynamicUIAutomator {
 
                     float posX = SizeUnitUtil.getPositionX(context, posXText);
                     float posY = SizeUnitUtil.getPositionY(context, posYText);
+
+                    // UiDeviceにロングクリックが存在しないので、dragにて代用
                     mDevice.drag((int) posX, (int) posY, (int) posX, (int) posY, 1000);
                 }
             }

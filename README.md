@@ -60,7 +60,7 @@ Configファイルは以下のような構成となっている。<br/>
 </thead>
 <tbody>
 <tr>
-<td>Click</td><td>指定された部品や画面の特定の位置をクリック</td><td>PositionX<br/>PositionY</td>
+<td>Click</td><td>指定された部品や画面の特定の位置をクリック</td><td>OffsetX<br/>OffsetY<br/>PositionX<br/>PositionY</td>
 </tr>
 <tr>
 <td>ClickSystemKey</td><td>Back/Homeなどのシステムキーをクリック</td><td>Text<br/></td>
@@ -78,7 +78,7 @@ Configファイルは以下のような構成となっている。<br/>
 <td>InputText</td><td>特定の部品に対して文字入力を実施</td><td>Text</td>
 </tr>
 <tr>
-<td>LongClick</td><td>指定された部品や画面の特定の位置を長クリック</td><td>PositionX<br/>PositionY</td>
+<td>LongClick</td><td>指定された部品や画面の特定の位置を長クリック</td><td>OffsetX<br/>OffsetY<br/>PositionX<br/>PositionY</td>
 </tr>
 <tr>
 <td>ScreenShot</td><td>スクリーンショットを取得</td><td>Quality<br/>Scale<br/>Suffix</td>
@@ -184,6 +184,8 @@ itemClassとの重複設定可能。<br/>
 |Focusable|Test<br/>|対象とする部品のFocusable属性がvalueで指定された値か否かを判定|true / false|
 |Focused|Test<br/>|対象とする部品のFocused属性がvalueで指定された値か否かを判定|true / false|
 |LongClickable|Test<br/>|対象とする部品のLongClickable属性がvalueで指定された値か否かを判定|true / false|
+|OffsetX|Click|起点とする部品の中心からのX軸方向のオフセット量。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面横方向のサイズに対する割合|単位付整数(dp / sp / %)|
+|OffsetY|Click|起点とする部品の中心からのY軸方向のオフセット量。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面縦方向のサイズに対する割合|単位付整数(dp / sp / %)|
 |PositionX|Click<br/>Drag<br/>LongClick<br/>Swipe<br/>|操作する際のX座標。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面横方向のサイズに対する割合|単位付整数(dp / sp / %)|
 |PositionY|Click<br/>Drag<br/>LongClick<br/>Swipe<br/>|操作する際のY座標。単位なし時はpx、対応している単位は%/dp/sp<br/>%は画面縦方向のサイズに対する割合|単位付整数(dp / sp / %)|
 |Quality|ScreenShot<br/>|スクリーンショット取得時のQuality(0 ~ 100)。<br/>デフォルト100|0 ~ 100の整数|
