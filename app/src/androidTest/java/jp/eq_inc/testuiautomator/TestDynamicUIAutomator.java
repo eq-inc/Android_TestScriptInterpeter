@@ -123,8 +123,6 @@ public class TestDynamicUIAutomator {
                                 String methodName = "procedure" + procedureType.name();
                                 Method procedureMethod = getClass().getDeclaredMethod(methodName, ConfigData.TestProcedure.class);
                                 procedureMethod.invoke(this, procedure);
-                            } else {
-                                UiAutomatorException.throwException(procedure, "unknown process type: " + procedure.type);
                             }
                         } catch (TestAbortException e) {
                             e.printStackTrace();
