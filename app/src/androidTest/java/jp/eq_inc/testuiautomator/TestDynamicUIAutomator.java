@@ -13,6 +13,7 @@ import android.support.test.runner.AndroidJUnit4;
 import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.UiObject;
+import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiScrollable;
 import android.support.test.uiautomator.UiSelector;
@@ -651,7 +652,7 @@ public class TestDynamicUIAutomator {
                 int totalSleepIntervalMS = 0;
 
                 while (totalSleepIntervalMS < timeoutMS) {
-                    UiObject targetItem = mDevice.findObject(new UiSelector().text(param.value));
+                    UiObject2 targetItem = mDevice.findObject(By.text(param.value));
                     if (targetItem != null) {
                         break;
                     } else {
@@ -672,8 +673,8 @@ public class TestDynamicUIAutomator {
                 int totalSleepIntervalMS = 0;
 
                 while (totalSleepIntervalMS < timeoutMS) {
-                    UiObject targetItem = mDevice.findObject(new UiSelector().resourceId(param.value));
-                    if ((targetItem != null) && targetItem.exists()) {
+                    UiObject2 targetItem = mDevice.findObject(By.res(param.value));
+                    if (targetItem != null) {
                         break;
                     } else {
                         try {
@@ -683,6 +684,54 @@ public class TestDynamicUIAutomator {
                         } finally {
                             totalSleepIntervalMS += SCREEN_POLLING_INTERVAL_MS;
                         }
+                    }
+                }
+                return;
+            }
+
+            param = procedure.getParam(ConfigData.ParameterType.WaitHidePackage);
+            if (param != null) {
+                mDevice.wait(Until.gone(By.pkg(mDevice.getCurrentPackageName())), timeoutMS);
+                return;
+            }
+
+            param = procedure.getParam(ConfigData.ParameterType.WaitHideItemByText);
+            if (param != null) {
+                int totalSleepIntervalMS = 0;
+
+                while (totalSleepIntervalMS < timeoutMS) {
+                    UiObject2 targetItem = mDevice.findObject(By.text(param.value));
+                    if (targetItem != null) {
+                        try {
+                            Thread.sleep(SCREEN_POLLING_INTERVAL_MS);
+                        } catch (InterruptedException e) {
+                            // 処理なし
+                        } finally {
+                            totalSleepIntervalMS += SCREEN_POLLING_INTERVAL_MS;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                return;
+            }
+
+            param = procedure.getParam(ConfigData.ParameterType.WaitHideItemByResourceId);
+            if (param != null) {
+                int totalSleepIntervalMS = 0;
+
+                while (totalSleepIntervalMS < timeoutMS) {
+                    UiObject2 targetItem = mDevice.findObject(By.res(param.value));
+                    if (targetItem != null) {
+                        try {
+                            Thread.sleep(SCREEN_POLLING_INTERVAL_MS);
+                        } catch (InterruptedException e) {
+                            // 処理なし
+                        } finally {
+                            totalSleepIntervalMS += SCREEN_POLLING_INTERVAL_MS;
+                        }
+                    } else {
+                        break;
                     }
                 }
                 return;
