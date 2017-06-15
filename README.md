@@ -13,6 +13,13 @@ file:///android_asset/[assetsフォルダ内のパス]<br/>
 file:///android_asset/category/test.json<br/>
 
 # Configファイル
+## 優先順位
+以下の優先順位にて、使用するConfigファイルが決定される。
+1. config_fileパラメータで指定された"デバイス内のファイル"(指定されていても、実際にファイルが存在しない場合は指定なしとみなす)
+2. /storage/emulated/0/ui_automator.json
+3. file:///android_asset/ui_automator.json
+
+## 構成
 Configファイルは以下のような構成となっている。<br/>
 
 <table border="1">
